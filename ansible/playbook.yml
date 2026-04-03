@@ -1,0 +1,33 @@
+- name: Setup and Deploy App
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Update packages
+      apt:
+        update_cache: yes
+
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Start Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Pull Docker Image
+      command: docker pull {{ image }}
+
+    - name: Stop old container
+      command: docker stop app
+      ignore_errors: yes
+
+    - name: Remove old container
+      command: docker rm app
+      ignore_errors: yes
+
+    - name: Run new container
+      command: docker run -d -p 80:8080 --name app {{ image }}
