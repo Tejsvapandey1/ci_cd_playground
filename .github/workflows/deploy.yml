@@ -1,0 +1,66 @@
+name: Full DevOps Pipeline
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # 🏗️ Setup Terraform
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    # 🔐 Configure AWS
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-south-1
+
+    # 🚀 Terraform Apply
+    - name: Terraform Init & Apply
+      working-directory: terraform
+      run: |
+        terraform init
+        terraform apply -auto-approve
+
+    # 📤 Get Public IP
+    - name: Get Server IP
+      id: tf_output
+      working-directory: terraform
+      run: echo "IP=$(terraform output -raw public_ip)" >> $GITHUB_ENV
+
+    # 🐳 Login to DockerHub
+    - name: Docker Login
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+    # 🏗 Build Image
+    - name: Build Image
+      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ci-cd-app:${{ github.sha }} ./app
+
+    # 📦 Push Image
+    - name: Push Image
+      run: docker push ${{ secrets.DOCKER_USERNAME }}/ci-cd-app:${{ github.sha }}
+
+    # 🔑 Setup SSH Key
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/key.pem
+        chmod 600 ~/.ssh/key.pem
+
+    # 🤖 Run Ansible
+    - name: Run Ansible Playbook
+      run: |
+        ansible-playbook ansible/playbook.yml \
+        -i "$IP," \
+        --private-key ~/.ssh/key.pem \
+        -u ubuntu \
+        --extra-vars "image=${{ secrets.DOCKER_USERNAME }}/ci-cd-app:${{ github.sha }}" 

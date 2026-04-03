@@ -1,0 +1,39 @@
+# Secrets and local credentials
+*.pem
+*.key
+*.csv
+
+# Terraform local state and variable files
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+.terraform.lock.hcl
+
+# Ansible retry artifacts
+*.retry
+
+# Go build outputs
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+bin/
+
+# Local environment files
+.env
+.env.*
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local downloaded tools and archives
+aws/
+awscliv2.zip
